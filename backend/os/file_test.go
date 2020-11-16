@@ -406,6 +406,86 @@ func (s *osFileTest) TestMoveToFile() {
 	s.NoError(file2.MoveToFile(mockFile))
 }
 
+func (s *osFileTest) TestWrite_InPlace() {
+	file, err := s.tmploc.NewFile("test_files/new.txt")
+	s.NoError(err)
+
+	startingText := "THIS IS SOME TEXT ALREADY IN FILE"
+	_, werr := file.Write([]byte(startingText))
+	s.NoError(werr, "write error not expected")
+
+	editInPlaceText := "this is my text "
+	completeText := "THIS IS SOthis is my text IN FILE"
+	data := make([]byte, len(completeText))
+
+	// from beginning of the file, 10 offset
+	_, serr := file.Seek(10, 0)
+	s.NoError(serr, "seek error not expected")
+	_, werr = file.Write([]byte(editInPlaceText))
+	s.NoError(werr, "write error not expected")
+
+	// seek to the beginning so we can read from start to finish
+	_, serr = file.Seek(0, 0)
+	s.NoError(serr, "seek error not expected")
+
+	_, rerr := file.Read(data)
+	s.NoError(rerr, "read error not expected")
+	cerr := file.Close()
+	s.NoError(cerr, "close error not expected")
+	s.Equal(completeText, string(data))
+
+	found, eErr := file.Exists()
+	s.NoError(eErr, "exists error not expected")
+	s.True(found)
+
+	err = file.Delete()
+	s.NoError(err, "File was not deleted properly")
+
+	found2, eErr2 := file.Exists()
+	s.NoError(eErr2, "exists error not expected")
+	s.False(found2)
+}
+
+func (s *osFileTest) TestWrite_Append() {
+	startingText := "THIS IS SOME TEXT ALREADY IN FILE"
+	file, err := s.tmploc.NewFile("test_files/new.txt")
+	s.NoError(err)
+
+	_, werr := file.Write([]byte(startingText))
+	s.NoError(werr, "write error not expected")
+	// from the end of the file so we can add to it
+	_, serr := file.Seek(0, 2)
+	s.NoError(serr, "seek error not expected")
+
+	appendText := " this is my text"
+	completeText := "THIS IS SOME TEXT ALREADY IN FILE this is my text"
+	data := make([]byte, len(completeText))
+
+	_, werr = file.Write([]byte(appendText))
+	s.NoError(werr, "write error not expected")
+
+	// seek to the beginning so we can read from start to finish
+	_, serr = file.Seek(0, 0)
+	s.NoError(serr, "seek error not expected")
+
+	_, rerr := file.Read(data)
+	s.NoError(rerr, "read error not expected")
+	cerr := file.Close()
+	s.NoError(cerr, "close error not expected")
+	s.Equal(completeText, string(data))
+
+	found, eErr := file.Exists()
+	s.NoError(eErr, "exists error not expected")
+	s.True(found)
+
+	err = file.Delete()
+	s.NoError(err, "File was not deleted properly")
+
+	found2, eErr2 := file.Exists()
+	s.NoError(eErr2, "exists error not expected")
+	s.False(found2)
+}
+
 func (s *osFileTest) TestWrite() {
 	expectedText := "new file"
 	data := make([]byte, len(expectedText))
